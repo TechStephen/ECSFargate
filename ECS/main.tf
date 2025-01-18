@@ -66,7 +66,7 @@ resource "aws_ecs_task_definition" "task_definition" {
 resource "aws_security_group" "ecs_sg" {
   name        = "ecs-service-sg"
   description = "Allow traffic for ECS service"
-  vpc_id      = var.vpc_id # Replace with your VPC ID
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 80
