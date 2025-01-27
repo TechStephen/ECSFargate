@@ -16,11 +16,19 @@ module "IAM" {
     source = "./IAM"
 }
 
+module "ALB" {
+    source = "./ALB"
+    security_group_id = module.ECS.security_group_id
+    subnet_ids = [module.VPC.subnet_id_one, module.VPC.subnet_id_two]
+    vpc_id = module.VPC.vpc_id
+}
+
 module "ECS" {
     source = "./ECS"
-    subnet_id = module.VPC.subnet_id
+    subnet_ids = [module.VPC.subnet_id_one, module.VPC.subnet_id_two]
     vpc_id = module.VPC.vpc_id
     ecs_task_execution_role = module.IAM.ecs_task_execution_role
+    asg_tg_arn = module.ALB.asg_tg_arn
 }
 
 module "VPC" {

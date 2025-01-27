@@ -9,3 +9,4 @@
 crash.log
 .terraform/
 .terraform.lock.hcl
+.terraform.tfstate.lock.info

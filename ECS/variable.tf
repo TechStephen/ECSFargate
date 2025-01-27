@@ -8,7 +8,12 @@ variable "vpc_id" {
   type = string
 }
 
-variable "subnet_id" {
+variable "subnet_ids" {
   description = "value of the subnet ID"
+  type = list(string)
+}
+
+variable "asg_tg_arn" {
+  description = "value of the ASG target group ARN"
   type = string
 }

@@ -13,13 +13,19 @@ resource "aws_ecs_service" "my_service" {
   name = "my-service"
   cluster = aws_ecs_cluster.app_cluster.id
   task_definition = aws_ecs_task_definition.task_definition.arn
-  desired_count = 3 # how many containers we want deployed
+  desired_count = 4 # how many containers we want deployed
   launch_type = "FARGATE"
 
   network_configuration {
-    subnets = [var.subnet_id]
+    subnets = [var.subnet_ids[0], var.subnet_ids[1]]
     security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = var.asg_tg_arn
+    container_name   = "my-container" # Match the name in your task definition
+    container_port   = 80 # Match the port exposed in your task definition
   }
 
   tags = {

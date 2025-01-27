@@ -22,6 +22,19 @@ resource "aws_subnet" "vpc_public_subnet" {
   }
 }
 
+# Create Public Subnet
+resource "aws_subnet" "vpc_public_subnet_two" {
+  vpc_id = aws_vpc.app_vpc.id
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "us-east-1b"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "ECSFargatePublicSubnetTwo"
+    Project = "ECS-Fargate"
+  }
+}
+
 # Create Route Table
 resource "aws_route_table" "ebs_vpc_route_table" {
   vpc_id = aws_vpc.app_vpc.id
