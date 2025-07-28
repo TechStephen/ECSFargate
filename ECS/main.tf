@@ -19,7 +19,7 @@ resource "aws_ecs_service" "my_service" {
   network_configuration {
     subnets = [var.subnet_ids[0], var.subnet_ids[1]]
     security_groups = [aws_security_group.ecs_sg.id]
-    assign_public_ip = true
+    assign_public_ip = false # private subnets for best practices
   }
 
   load_balancer {
@@ -73,13 +73,6 @@ resource "aws_security_group" "ecs_sg" {
   name        = "ecs-service-sg"
   description = "Allow traffic for ECS service"
   vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   egress {
     from_port   = 0
