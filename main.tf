@@ -3,6 +3,8 @@ terraform {
     #    bucket = "ecsfargate-state"
     #    key    = "terraform.tfstate"
     #    region = "us-east-1"
+    #    encrypt = true
+    #    use_lockfile = true
     #}   
     required_providers {
         aws = {
@@ -18,7 +20,6 @@ module "IAM" {
 
 module "ALB" {
     source = "./ALB"
-    security_group_id = module.ECS.security_group_id
     subnet_ids = module.VPC.alb_subnet_ids
     vpc_id = module.VPC.vpc_id
 }
