@@ -127,6 +127,7 @@ resource "aws_ecs_task_definition" "ms_task" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
+  execution_role_arn = var.ecs_task_execution_role
 
   container_definitions = jsonencode([
     {
@@ -159,6 +160,13 @@ resource "aws_ecs_service" "ms_service" {
 
   service_registries { # what links your service with cloud map (service discovery) and gives the .local internal domain
     registry_arn = aws_service_discovery_service.my_ms_discovery.arn
+  }
+
+  depends_on = [aws_service_discovery_service.my_ms_discovery]
+
+  tags = {
+    Name    = "ECS-Fargate-Microservice-Service"
+    Project = "ECS-Fargate"
   }
 }
 
