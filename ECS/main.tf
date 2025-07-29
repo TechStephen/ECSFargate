@@ -96,72 +96,96 @@ resource "aws_security_group" "ecs_sg" {
 
 ########### MS Task Definition and Service Discovery for Private Endpoint ###########
 
-# # Cloud Map Namespace (private)
-# resource "aws_service_discovery_private_dns_namespace" "local_ns" {
-#   name        = "services.local"
-#   description = "Private namespace for internal microservices"
-#   vpc         = var.vpc_id
-# }
+# Cloud Map Namespace (private)
+resource "aws_service_discovery_private_dns_namespace" "local_ns" {
+  name        = "services.local"
+  description = "Private namespace for internal microservices"
+  vpc         = var.vpc_id
+}
 
-# # Service Discovery Service
-# resource "aws_service_discovery_service" "my_ms_discovery" {
-#   name = "my-microservice"
-#   dns_config {
-#     namespace_id = aws_service_discovery_private_dns_namespace.local_ns.id
-#     dns_records {
-#       type = "A"
-#       ttl  = 10
-#     }
-#     routing_policy = "MULTIVALUE"
-#   }
+# Service Discovery Service
+resource "aws_service_discovery_service" "my_ms_discovery" {
+  name = "my-microservice"
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.local_ns.id
+    dns_records {
+      type = "A"
+      ttl  = 10
+    }
+    routing_policy = "MULTIVALUE"
+  }
 
-#   health_check_custom_config {
-#     failure_threshold = 1
-#   }
-# }
+  health_check_custom_config {
+    failure_threshold = 1
+  }
+}
 
-# # ECS Task Definition for Microservice
-# resource "aws_ecs_task_definition" "ms_task" {
-#   family                   = "my-microservice"
-#   network_mode             = "awsvpc"
-#   requires_compatibilities = ["FARGATE"]
-#   cpu                      = "256"
-#   memory                   = "512"
+# ECS Task Definition for Microservice
+resource "aws_ecs_task_definition" "ms_task" {
+  family                   = "my-microservice"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
 
-#   container_definitions = jsonencode([
-#     {
-#       name  = "my-microservice"
-#       image = "your-docker-image" # add docker image
-#       portMappings = [
-#         {
-#           containerPort = 3000
-#           protocol      = "tcp"
-#         }
-#       ]
-#     }
-#   ])
-# }
+  container_definitions = jsonencode([
+    {
+      name  = "my-microservice"
+      image = "767398032512.dkr.ecr.us-east-1.amazonaws.com/ecs-ms:latest" # add docker image
+      portMappings = [
+        {
+          containerPort = 80
+          protocol      = "tcp"
+        }
+      ],
+      essential = true
+    }
+  ])
+}
 
-# # ECS Service for Microservice with Service Discovery
-# resource "aws_ecs_service" "ms_service" {
-#   name            = "my-microservice"
-#   cluster         = aws_ecs_cluster.app_cluster.id
-#   task_definition = aws_ecs_task_definition.ms_task.arn
-#   desired_count   = 1
-#   launch_type     = "FARGATE"
+# ECS Service for Microservice with Service Discovery
+resource "aws_ecs_service" "ms_service" {
+  name            = "my-microservice"
+  cluster         = aws_ecs_cluster.app_cluster.id
+  task_definition = aws_ecs_task_definition.ms_task.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
 
-#   network_configuration {
-#     subnets         = [aws_subnet.vpc_private_subnet.id, aws_subnet.vpc_private_subnet_two.id]
-#     security_groups = [aws_security_group.ecs_sg.id]
-#     assign_public_ip = false
-#   }
+  network_configuration {
+    subnets         = [var.subnet_ids[0], var.subnet_ids[1]]
+    security_groups = [aws_security_group.microservice_sg.id]
+    assign_public_ip = false
+  }
 
-#   service_registries { # what gives the .local domain
-#     registry_arn = aws_service_discovery_service.my_ms_discovery.arn
-#   }
-# }
+  service_registries { # what links your service with cloud map (service discovery) and gives the .local internal domain
+    registry_arn = aws_service_discovery_service.my_ms_discovery.arn
+  }
+}
 
-# # Output the internal domain
-# output "internal_service_dns" {
-#   value = "my-microservice.services.local"
-# }
+resource "aws_security_group" "microservice_sg" {
+  name        = "microservice-sg"
+  description = "Allow traffic from frontend ECS service"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description      = "Allow frontend service to call microservice"
+    from_port        = 80                    # Change if your microservice listens on a different port
+    to_port          = 80
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.ecs_sg.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "microservice-sg"
+    Project = "ECS-Fargate"
+  }
+}
+
