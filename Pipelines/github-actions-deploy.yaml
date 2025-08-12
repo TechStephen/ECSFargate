@@ -1,0 +1,60 @@
+name: Terraform QA Deploy
+
+on:
+  push:
+    branches:
+      include:
+        - main
+
+jobs:
+  qa-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Up AWS
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Validate and Format Terraform
+        run: |
+          terraform fmt
+          terraform validate
+
+      - name: Run Terraform Lint
+        uses: terraform-linters/tflint@v4
+        with:
+          tflint_version: latest
+          run: |
+            tflint --init
+            tflint --error-with-issues -f compact
+
+      - name: Run Tfsec Scan for Misconfigurations
+        uses: aquasecurity/tfsec-action@v1
+        with:
+          tfsec_version: latest
+          run: |
+            tfsec --minimum-severity CRITICAL --out tfsec-report.json
+
+      - name: Run Unit Tests
+        run: |
+          cd ./test
+          go test -v
+
+      - name: Terraform plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
+
+
+
+
+      

@@ -3,66 +3,67 @@ resource "aws_ecs_cluster" "app_cluster" {
   name = "ECS-Fargate-Cluster"
 
   tags = {
-    Name = "ECS-Fargate-Cluster"
+    Name    = "ECS-Fargate-Cluster"
     Project = "ECS-Fargate"
   }
 }
 
 # Create ECS Service (Orchestrator)
 resource "aws_ecs_service" "my_service" {
-  name = "my-service"
-  cluster = aws_ecs_cluster.app_cluster.id
+  name            = "my-service"
+  cluster         = aws_ecs_cluster.app_cluster.id
   task_definition = aws_ecs_task_definition.task_definition.arn
-  desired_count = 4 # how many containers we want deployed
-  launch_type = "FARGATE"
+  desired_count   = 4 # how many containers we want deployed
+  launch_type     = "FARGATE"
 
   network_configuration {
-    subnets = var.subnet_ids
-    security_groups = [aws_security_group.ecs_sg.id]
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = false # private subnets for best practices
   }
 
   load_balancer {
     target_group_arn = var.asg_tg_arn
     container_name   = "my-container" # Match the name in your task definition
-    container_port   = 80 # Match the port exposed in your task definition
+    container_port   = 80             # Match the port exposed in your task definition
   }
 
   tags = {
-    Name = "ECS-Fargate-Service"
+    Name    = "ECS-Fargate-Service"
     Project = "ECS-Fargate"
   }
 }
 
 # Create ECS Task Definition (Containers)
 resource "aws_ecs_task_definition" "task_definition" {
-  family = "my-task-family"
+  family                   = "my-task-family"
   requires_compatibilities = ["FARGATE"] # Enabled Fargate
-  cpu = "256" # 0.25 vCPU   
-  memory = "512" # 0.5 GB
-  network_mode = "awsvpc" # Required for Fargate
-  execution_role_arn = var.ecs_task_execution_role
+  cpu                      = "256"       # 0.25 vCPU   
+  memory                   = "512"       # 0.5 GB
+  network_mode             = "awsvpc"    # Required for Fargate
+  execution_role_arn       = var.ecs_task_execution_role
 
   # Define Container(s)
   container_definitions = jsonencode([
     {
-        name = "my-container"
-        image = "767398032512.dkr.ecr.us-east-1.amazonaws.com/ecs-fe:latest" # encode if prod
-        cpu = 256
-        memory = 512
-        essential = true
-        portMappings = [{
-                containerPort = 80
-                hostPort = 80
-                protocol = "tcp"
-            }
-        ]
-        command = ["yarn", "start", "--port", "80"], // dockerfile starts to port 3000, to avoid updating we have to specify
+      name      = "my-container"
+      image     = "767398032512.dkr.ecr.us-east-1.amazonaws.com/ecs-fe:latest" # encode if prod 
+      cpu       = 256
+      memory    = 512
+      essential = true
+      portMappings = [{
+        containerPort = 80
+        hostPort      = 80
+        protocol      = "tcp"
+        name          = "http"
+        }
+      ]
+      command = ["yarn", "start", "--port", "80"], // dockerfile starts to port 3000, to avoid updating we have to specify
     }
   ])
 
   tags = {
-    Name = "ECS-Fargate-Tast-Definition"
+    Name    = "ECS-Fargate-Tast-Definition"
     Project = "ECS-Fargate"
   }
 }
@@ -89,7 +90,7 @@ resource "aws_security_group" "ecs_sg" {
   }
 
   tags = {
-    Name = "ECS-Fargate-SG"
+    Name    = "ECS-Fargate-SG"
     Project = "ECS-Fargate"
   }
 }
@@ -103,23 +104,6 @@ resource "aws_service_discovery_private_dns_namespace" "local_ns" {
   vpc         = var.vpc_id
 }
 
-# Service Discovery Service
-resource "aws_service_discovery_service" "my_ms_discovery" {
-  name = "my-microservice"
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.local_ns.id
-    dns_records {
-      type = "A"
-      ttl  = 10
-    }
-    routing_policy = "MULTIVALUE"
-  }
-
-  health_check_custom_config {
-    failure_threshold = 1
-  }
-}
-
 # ECS Task Definition for Microservice
 resource "aws_ecs_task_definition" "ms_task" {
   family                   = "my-microservice"
@@ -127,7 +111,7 @@ resource "aws_ecs_task_definition" "ms_task" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn = var.ecs_task_execution_role
+  execution_role_arn       = var.ecs_task_execution_role
 
   container_definitions = jsonencode([
     {
@@ -136,6 +120,7 @@ resource "aws_ecs_task_definition" "ms_task" {
       portMappings = [
         {
           containerPort = 80
+          name          = "http"
           protocol      = "tcp"
         }
       ],
@@ -153,16 +138,26 @@ resource "aws_ecs_service" "ms_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.subnet_ids
-    security_groups = [aws_security_group.microservice_sg.id]
+    subnets          = var.subnet_ids
+    security_groups  = [aws_security_group.microservice_sg.id]
     assign_public_ip = false
   }
 
-  service_registries { # what links your service with cloud map (service discovery) and gives the .local internal domain
-    registry_arn = aws_service_discovery_service.my_ms_discovery.arn
+  service_connect_configuration {
+    enabled   = true
+    namespace = aws_service_discovery_private_dns_namespace.local_ns.arn
+
+    service {
+      port_name      = "http"            # must match port name in task definition
+      discovery_name = "my-microservice" # optional, defaults to port_name
+      client_alias {
+        port     = 80
+        dns_name = "ms-alias"
+      }
+    }
   }
 
-  depends_on = [aws_service_discovery_service.my_ms_discovery]
+  depends_on = [aws_service_discovery_private_dns_namespace.local_ns]
 
   tags = {
     Name    = "ECS-Fargate-Microservice-Service"
@@ -176,11 +171,11 @@ resource "aws_security_group" "microservice_sg" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description      = "Allow frontend service to call microservice"
-    from_port        = 80                    # Change if your microservice listens on a different port
-    to_port          = 80
-    protocol         = "tcp"
-    security_groups  = [aws_security_group.ecs_sg.id]
+    description     = "Allow frontend service to call microservice"
+    from_port       = 80 # Change if your microservice listens on a different port
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_sg.id] # Allow traffic from ECS service security group
   }
 
   egress {
@@ -192,7 +187,7 @@ resource "aws_security_group" "microservice_sg" {
   }
 
   tags = {
-    Name = "microservice-sg"
+    Name    = "microservice-sg"
     Project = "ECS-Fargate"
   }
 }

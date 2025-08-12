@@ -1,0 +1,12 @@
+ignore:
+  - id: aws-elb-http-not-used
+    reason: "Test environment ALB HTTP only"
+  - id: aws-ec2-no-public-ip-subnet
+    reason: "Required for NAT Gateway in public subnets"
+  - id: aws-elb-alb-not-public
+    reason: "Internet-facing ALB is intended for test"
+  - id: aws-ec2-no-public-ingress-sgr
+    reason: "Test environment requires public access for ALB"
+  - id: aws-ec2-no-public-egress-sgr
+    reason: "Test environment requires public access for ALB"
+  
