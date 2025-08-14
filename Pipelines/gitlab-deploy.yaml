@@ -14,7 +14,7 @@ default:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 
-# Checkout & Terraform Validate
+# Checkout & Terraform Valid  ate
 validate:
   stage: validate
   image: hashicorp/terraform:1.9

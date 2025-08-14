@@ -1,4 +1,4 @@
-# Create ECS Cluster
+# Create ECS Cluster (Orchestration Cluster)
 resource "aws_ecs_cluster" "app_cluster" {
   name = "ECS-Fargate-Cluster"
 
@@ -8,7 +8,7 @@ resource "aws_ecs_cluster" "app_cluster" {
   }
 }
 
-# Create ECS Service (Orchestrator)
+# Create ECS Service (Service)
 resource "aws_ecs_service" "my_service" {
   name            = "my-service"
   cluster         = aws_ecs_cluster.app_cluster.id
