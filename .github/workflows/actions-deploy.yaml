@@ -27,19 +27,24 @@ jobs:
           terraform fmt
           terraform validate
 
-      - name: Run Terraform Lint
+      - name: Install Terraform Lint
         uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: latest
+
+      - name: Run Terraform Lint
         run: |
           tflint --init
           tflint --error-with-issues -f compact
 
-      - name: Run Tfsec Scan for Misconfigurations
+      - name: Install Tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          args: |
-            tfsec --minimum-severity CRITICAL --out tfsec-report.json
+          tfsec_version: latest
+          
+      - name: Run Tfsec Scan for Misconfigurations    
+        run: |
+          tfsec --minimum-severity CRITICAL --out tfsec-report.json
 
       - name: Run Unit Tests
         run: |
