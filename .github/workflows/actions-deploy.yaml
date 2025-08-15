@@ -38,9 +38,8 @@ jobs:
       - name: Run Tfsec Scan for Misconfigurations
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          tfsec_version: latest
-        run: |
-          tfsec --minimum-severity CRITICAL --out tfsec-report.json
+          args: |
+            tfsec --minimum-severity CRITICAL --out tfsec-report.json
 
       - name: Run Unit Tests
         run: |
