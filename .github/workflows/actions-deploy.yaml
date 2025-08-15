@@ -49,7 +49,7 @@ jobs:
           
       - name: Run Tfsec Scan for Misconfigurations    
         run: |
-          tfsec --minimum-severity CRITICAL --out tfsec-report.json
+          tfsec --config-file .tfsec.yaml --minimum-severity CRITICAL --out tfsec-report.json
 
       - name: Run Unit Tests
         run: |
