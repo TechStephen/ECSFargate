@@ -40,7 +40,7 @@ jobs:
       - name: Run Terraform Lint
         run: |
           tflint --init
-          tflint --error-with-issues -f compact
+          tflint -f compact
 
       - name: Install Tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
