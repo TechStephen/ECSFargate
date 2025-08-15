@@ -28,19 +28,19 @@ jobs:
           terraform validate
 
       - name: Run Terraform Lint
-        uses: terraform-linters/tflint@v4
+        uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: latest
-          run: |
-            tflint --init
-            tflint --error-with-issues -f compact
+        run: |
+          tflint --init
+          tflint --error-with-issues -f compact
 
       - name: Run Tfsec Scan for Misconfigurations
-        uses: aquasecurity/tfsec-action@v1
+        uses: aquasecurity/tfsec-action@v1.0.3
         with:
           tfsec_version: latest
-          run: |
-            tfsec --minimum-severity CRITICAL --out tfsec-report.json
+        run: |
+          tfsec --minimum-severity CRITICAL --out tfsec-report.json
 
       - name: Run Unit Tests
         run: |
